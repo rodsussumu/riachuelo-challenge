@@ -1,0 +1,33 @@
+package com.rodsussumu.riachuelo_backend.application.controllers;
+
+import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthDTO;
+import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthResponseDTO;
+import com.rodsussumu.riachuelo_backend.application.dtos.UserRegisterResponseDTO;
+import com.rodsussumu.riachuelo_backend.application.services.UserService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/auth")
+public class UserController {
+
+    private final UserService userService;
+
+    UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("register")
+    public ResponseEntity<UserRegisterResponseDTO> register(@RequestBody UserAuthDTO userAuthDTO) {
+        return userService.register(userAuthDTO);
+    }
+
+    @PostMapping("login")
+    public ResponseEntity<UserAuthResponseDTO> login(@RequestBody UserAuthDTO userAuthDTO) {
+        return userService.login(userAuthDTO);
+    }
+
+}
