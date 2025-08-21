@@ -3,6 +3,7 @@ import com.rodsussumu.riachuelo_backend.application.dtos.StatusUpdateRequestDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskRequestDTO;
 import com.rodsussumu.riachuelo_backend.application.services.TaskService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/tasks")
+@Tag(name = "Tasks")
 public class TaskController {
 
     private final TaskService taskService;
