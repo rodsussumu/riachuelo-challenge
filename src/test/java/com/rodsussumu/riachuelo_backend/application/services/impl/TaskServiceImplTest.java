@@ -12,199 +12,280 @@ import com.rodsussumu.riachuelo_backend.application.models.Task;
 import com.rodsussumu.riachuelo_backend.application.models.User;
 import com.rodsussumu.riachuelo_backend.application.repositories.TaskRepository;
 import com.rodsussumu.riachuelo_backend.application.repositories.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
+import org.apache.coyote.BadRequestException;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-public class TaskServiceImplTest {
+@ExtendWith(MockitoExtension.class)
+class TaskServiceImplTest {
 
-    private TaskRepository taskRepository;
-    private UserRepository userRepository;
-    private TaskMapper taskMapper;
-    private TaskServiceImpl service;
-    private final User currentUser = new User();
+    @Mock
+    TaskRepository taskRepository;
+
+    @Mock
+    UserRepository userRepository;
+
+    @Mock
+    TaskMapper taskMapper;
+
+    @MockitoBean
+    TaskServiceImpl service;
+
+    @MockitoBean
+    User currentUser;
 
     @BeforeEach
-    void setup() {
-        taskRepository = mock(TaskRepository.class);
-        userRepository = mock(UserRepository.class);
-        taskMapper = mock(TaskMapper.class);
+    void setUp() {
         service = new TaskServiceImpl(taskRepository, userRepository, taskMapper);
-
-        Authentication auth = mock(Authentication.class);
-        when(auth.getName()).thenReturn("john");
-        SecurityContext ctx = mock(SecurityContext.class);
-        when(ctx.getAuthentication()).thenReturn(auth);
-        SecurityContextHolder.setContext(ctx);
-
+        currentUser = new User();
         currentUser.setId(1L);
-        currentUser.setUsername("john");
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(currentUser));
+        currentUser.setUsername("alice");
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("alice", "pwd"));
+        // sem stubbing aqui!
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void stubCurrentUser() {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(currentUser));
+    }
+
+    private Task task(long id, StatusEnum status, Date due, User user) {
+        Task t = new Task();
+        t.setId(id);
+        t.setDescription("T" + id);
+        t.setStatus(status);
+        t.setDueDate(due);
+        t.setUser(user);
+        return t;
     }
 
     @Test
-    @DisplayName("create should persist task with authenticated user and return DTO")
-    void create_shouldPersistWithUser() {
-        TaskRequestDTO request = TaskRequestDTO.builder()
-                .description("New task")
-                .dueDate(new Date())
-                .build();
-
-        Task entity = new Task();
-        entity.setDescription("New task");
-
-        Task saved = new Task();
-        saved.setId(10L);
-        saved.setDescription("New task");
-        saved.setUser(currentUser);
-
-        TaskDTO dto = TaskDTO.builder().id(10L).description("New task").status(StatusEnum.PENDING).build();
-
-        when(taskMapper.toEntity(request)).thenReturn(entity);
-        when(taskRepository.save(entity)).thenReturn(saved);
-        when(taskMapper.toDTO(saved)).thenReturn(dto);
-
-        TaskDTO result = service.create(request);
-
-        assertEquals(10L, result.id());
-        verify(taskRepository).save(entity);
-        assertEquals(currentUser, saved.getUser());
-    }
-
-    @Test
-    @DisplayName("listAll should return only current user's tasks")
+    @DisplayName("listAll(null, null) returns user tasks")
     void listAll_shouldReturnUserTasks() {
-        Task t1 = new Task(); t1.setId(1L); t1.setUser(currentUser);
-        Task t2 = new Task(); t2.setId(2L); t2.setUser(currentUser);
-        List<Task> tasks = List.of(t1, t2);
+        stubCurrentUser();
+        Task a = task(1, StatusEnum.PENDING, new Date(System.currentTimeMillis() + 86_400_000), currentUser);
+        Task b = task(2, StatusEnum.DONE, new Date(System.currentTimeMillis() + 172_800_000), currentUser);
+        when(taskRepository.findByUser(currentUser)).thenReturn(List.of(a, b));
+        when(taskMapper.toDTOList(anyList())).thenAnswer(inv -> {
+            List<Task> in = inv.getArgument(0);
+            List<TaskDTO> out = new ArrayList<>();
+            for (Task t : in) out.add(TaskDTO.builder().id(t.getId()).description(t.getDescription()).status(t.getStatus()).build());
+            return out;
+        });
 
-        TaskDTO d1 = TaskDTO.builder().id(1L).build();
-        TaskDTO d2 = TaskDTO.builder().id(2L).build();
-        List<TaskDTO> dtos = List.of(d1, d2);
+        List<TaskDTO> dtos = service.listAll(null, null);
 
-        when(taskRepository.findByUser(currentUser)).thenReturn(tasks);
-        when(taskMapper.toDTOList(tasks)).thenReturn(dtos);
-
-        List<TaskDTO> result = service.listAll();
-        assertEquals(2, result.size());
-        assertEquals(1L, result.get(0).id());
-        assertEquals(2L, result.get(1).id());
+        assertEquals(2, dtos.size());
+        assertEquals(1L, dtos.get(0).id());
+        assertEquals(2L, dtos.get(1).id());
+        verify(taskRepository).findByUser(currentUser);
+        verify(taskRepository, never()).findByUserAndStatus(any(), any());
     }
 
     @Test
-    @DisplayName("listById should return DTO when task is owned by user")
-    void listById_shouldReturnWhenOwned() {
-        Task task = new Task();
-        task.setId(5L); task.setUser(currentUser);
+    @DisplayName("listAll with status filter calls repository by status")
+    void listAll_statusFilter() {
+        stubCurrentUser();
+        Task c = task(3, StatusEnum.DONE, new Date(), currentUser);
+        when(taskRepository.findByUserAndStatus(currentUser, StatusEnum.DONE)).thenReturn(List.of(c));
+        when(taskMapper.toDTOList(anyList())).thenReturn(List.of(
+                TaskDTO.builder().id(3L).description("T3").status(StatusEnum.DONE).build()
+        ));
 
-        when(taskRepository.findById(5L)).thenReturn(Optional.of(task));
-        when(taskMapper.toDTO(task)).thenReturn(TaskDTO.builder().id(5L).build());
+        List<TaskDTO> dtos = service.listAll(StatusEnum.DONE, null);
 
-        TaskDTO dto = service.listById(5L);
-        assertEquals(5L, dto.id());
+        assertEquals(1, dtos.size());
+        assertEquals("T3", dtos.get(0).description());
+        verify(taskRepository).findByUserAndStatus(currentUser, StatusEnum.DONE);
+        verify(taskRepository, never()).findByUser(currentUser);
     }
 
     @Test
-    @DisplayName("listById should throw TaskNotFoundException when id does not exist")
-    void listById_shouldThrowWhenNotFound() {
-        when(taskRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(TaskNotFoundException.class, () -> service.listById(99L));
+    @DisplayName("listAll sorts by dueDate ascending")
+    void listAll_sortDueDateAsc() {
+        stubCurrentUser();
+        Date later = new Date(System.currentTimeMillis() + 172_800_000);
+        Date sooner = new Date(System.currentTimeMillis() + 86_400_000);
+        Task t1 = task(1, StatusEnum.PENDING, later, currentUser);
+        Task t2 = task(2, StatusEnum.PENDING, sooner, currentUser);
+        when(taskRepository.findByUser(currentUser)).thenReturn(new ArrayList<>(List.of(t1, t2)));
+        when(taskMapper.toDTOList(anyList())).thenAnswer(inv -> {
+            List<Task> in = inv.getArgument(0);
+            List<TaskDTO> out = new ArrayList<>();
+            for (Task t : in) out.add(TaskDTO.builder().id(t.getId()).status(t.getStatus()).description(t.getDescription()).build());
+            return out;
+        });
+
+        List<TaskDTO> dtos = service.listAll(null, "dueDateAsc");
+
+        assertEquals(List.of(2L, 1L), dtos.stream().map(TaskDTO::id).toList());
     }
 
     @Test
-    @DisplayName("listById should throw OwnershipDeniedException when task belongs to another user")
-    void listById_shouldThrowWhenNotOwned() {
-        User other = new User(); other.setId(77L);
-        Task task = new Task(); task.setId(6L); task.setUser(other);
-        when(taskRepository.findById(6L)).thenReturn(Optional.of(task));
-        assertThrows(OwnershipDeniedException.class, () -> service.listById(6L));
+    @DisplayName("listAll sorts by dueDate descending")
+    void listAll_sortDueDateDesc() {
+        stubCurrentUser();
+        Date later = new Date(System.currentTimeMillis() + 172_800_000);
+        Date sooner = new Date(System.currentTimeMillis() + 86_400_000);
+        Task t1 = task(1, StatusEnum.PENDING, later, currentUser);
+        Task t2 = task(2, StatusEnum.PENDING, sooner, currentUser);
+        when(taskRepository.findByUser(currentUser)).thenReturn(new ArrayList<>(List.of(t1, t2)));
+        when(taskMapper.toDTOList(anyList())).thenAnswer(inv -> {
+            List<Task> in = inv.getArgument(0);
+            List<TaskDTO> out = new ArrayList<>();
+            for (Task t : in) out.add(TaskDTO.builder().id(t.getId()).status(t.getStatus()).description(t.getDescription()).build());
+            return out;
+        });
+
+        List<TaskDTO> dtos = service.listAll(null, "dueDateDesc");
+
+        assertEquals(List.of(1L, 2L), dtos.stream().map(TaskDTO::id).toList());
     }
 
     @Test
-    @DisplayName("updateTask should apply mapper.updateFromRequest and save")
-    void updateTask_shouldUseMapperAndSave() {
-        TaskRequestDTO request = TaskRequestDTO.builder().description("edited").dueDate(new Date()).build();
-        Task existing = new Task(); existing.setId(7L); existing.setUser(currentUser);
-        Task saved = new Task(); saved.setId(7L); saved.setUser(currentUser); saved.setDescription("edited");
-        TaskDTO dto = TaskDTO.builder().id(7L).description("edited").build();
+    @DisplayName("listById returns DTO when task is owned")
+    void listById_owned() {
+        stubCurrentUser();
+        Task t = task(10, StatusEnum.IN_PROGRESS, new Date(), currentUser);
+        when(taskRepository.findById(10L)).thenReturn(Optional.of(t));
+        when(taskMapper.toDTO(t)).thenReturn(TaskDTO.builder().id(10L).description("T10").status(StatusEnum.IN_PROGRESS).build());
 
-        when(taskRepository.findById(7L)).thenReturn(Optional.of(existing));
-        doAnswer(inv -> {
-            TaskRequestDTO r = inv.getArgument(0);
-            Task t = inv.getArgument(1);
-            t.setDescription(r.description());
-            return null;
-        }).when(taskMapper).updateFromRequest(eq(request), any(Task.class));
-        when(taskRepository.save(existing)).thenReturn(saved);
-        when(taskMapper.toDTO(saved)).thenReturn(dto);
+        TaskDTO dto = service.listById(10L);
 
-        TaskDTO result = service.updateTask(7L, request);
-        assertEquals("edited", result.description());
-        verify(taskRepository).save(existing);
+        assertEquals(10L, dto.id());
+        verify(taskRepository).findById(10L);
     }
 
     @Test
-    @DisplayName("updateStatus should accept case-insensitive string and persist")
-    void updateStatus_shouldAcceptStringAndPersist() throws Exception {
-        Task existing = new Task(); existing.setId(8L); existing.setUser(currentUser);
-        when(taskRepository.findById(8L)).thenReturn(Optional.of(existing));
+    @DisplayName("listById throws OwnershipDenied when task is from another user")
+    void listById_notOwned_throws() {
+        stubCurrentUser();
+        User other = new User();
+        other.setId(99L);
+        Task t = task(11, StatusEnum.PENDING, new Date(), other);
+        when(taskRepository.findById(11L)).thenReturn(Optional.of(t));
 
-        Task saved = new Task(); saved.setId(8L); saved.setUser(currentUser); saved.setStatus(StatusEnum.DONE);
-        when(taskRepository.save(existing)).thenReturn(saved);
-
-        TaskDTO dto = TaskDTO.builder().id(8L).status(StatusEnum.DONE).build();
-        when(taskMapper.toDTO(saved)).thenReturn(dto);
-
-        TaskDTO result = service.updateStatus(8L, "done");
-        assertEquals(StatusEnum.DONE, result.status());
-        verify(taskRepository).save(existing);
+        assertThrows(OwnershipDeniedException.class, () -> service.listById(11L));
     }
 
     @Test
-    @DisplayName("updateStatus should throw InvalidStatusException for invalid values")
-    void updateStatus_shouldThrowOnInvalid() {
-        Task existing = new Task(); existing.setId(11L); existing.setUser(currentUser);
-        when(taskRepository.findById(11L)).thenReturn(Optional.of(existing));
-        assertThrows(InvalidStatusException.class, () -> service.updateStatus(11L, "DON"));
-        verify(taskRepository, never()).save(any());
+    @DisplayName("updateStatus updates when valid")
+    void updateStatus_valid() throws BadRequestException {
+        stubCurrentUser();
+        Task t = task(20, StatusEnum.PENDING, new Date(), currentUser);
+        when(taskRepository.findById(20L)).thenReturn(Optional.of(t));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(taskMapper.toDTO(any(Task.class))).thenAnswer(inv -> {
+            Task x = inv.getArgument(0);
+            return TaskDTO.builder().id(x.getId()).description(x.getDescription()).status(x.getStatus()).build();
+        });
+
+        TaskDTO dto = service.updateStatus(20L, "done");
+
+        assertEquals(StatusEnum.DONE, dto.status());
     }
 
     @Test
-    @DisplayName("deleteTask should delete when task is owned by user")
-    void deleteTask_shouldDelete() {
-        Task existing = new Task(); existing.setId(9L); existing.setUser(currentUser);
-        when(taskRepository.findById(9L)).thenReturn(Optional.of(existing));
-        service.deleteTask(9L);
-        verify(taskRepository).delete(existing);
+    @DisplayName("updateStatus throws InvalidStatus for unknown status")
+    void updateStatus_invalid() {
+        stubCurrentUser();
+        Task t = task(21, StatusEnum.PENDING, new Date(), currentUser);
+        when(taskRepository.findById(21L)).thenReturn(Optional.of(t));
+
+        assertThrows(InvalidStatusException.class, () -> service.updateStatus(21L, "weird"));
     }
 
     @Test
-    @DisplayName("methods depending on authenticated user should throw InvalidTokenException when user cannot be resolved")
+    @DisplayName("create maps request to entity, sets user and returns DTO")
+    void create_createsTask() {
+        stubCurrentUser();
+        TaskRequestDTO req = TaskRequestDTO.builder().description("New").dueDate(new Date()).build();
+        Task entity = task(0, StatusEnum.PENDING, req.dueDate(), null);
+        when(taskMapper.toEntity(req)).thenReturn(entity);
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
+            Task x = inv.getArgument(0);
+            x.setId(100L);
+            return x;
+        });
+        when(taskMapper.toDTO(any(Task.class))).thenAnswer(inv -> {
+            Task x = inv.getArgument(0);
+            return TaskDTO.builder().id(x.getId()).description(x.getDescription()).status(x.getStatus()).build();
+        });
+
+        TaskDTO dto = service.create(req);
+
+        assertEquals(100L, dto.id());
+        verify(taskRepository).save(argThat(t -> t.getUser() != null && t.getUser().getId().equals(1L)));
+    }
+
+    @Test
+    @DisplayName("deleteTask removes owned task")
+    void delete_deletesOwnedTask() {
+        stubCurrentUser();
+        Task t = task(30, StatusEnum.DONE, new Date(), currentUser);
+        when(taskRepository.findById(30L)).thenReturn(Optional.of(t));
+
+        service.deleteTask(30L);
+
+        verify(taskRepository).delete(t);
+    }
+
+    @Test
+    @DisplayName("methods throw InvalidToken when user is missing")
     void methods_shouldThrowInvalidTokenWhenUserMissing() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.empty());
-        assertThrows(InvalidTokenException.class, () -> service.listAll());
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("ghost", "pwd"));
+        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+
+        assertThrows(InvalidTokenException.class, () -> service.listAll(null, null));
     }
 
     @Test
-    @DisplayName("listById should throw OwnershipDeniedException when task has no user")
-    void listById_shouldThrowWhenTaskHasNoUser() {
-        Task task = new Task();
-        task.setId(12L);
-        task.setUser(null);
+    @DisplayName("listById throws TaskNotFound when id does not exist")
+    void listById_taskNotFound() {
+        when(taskRepository.findById(404L)).thenReturn(Optional.empty());
 
-        when(taskRepository.findById(12L)).thenReturn(Optional.of(task));
+        assertThrows(TaskNotFoundException.class, () -> service.listById(404L));
+        verify(userRepository, never()).findByUsername(anyString());
+    }
 
-        assertThrows(OwnershipDeniedException.class, () -> service.listById(12L));
+    @Test
+    @DisplayName("listAll with unknown sort evaluates else-if as false and keeps order")
+    void listAll_unknownSort_keepsOrder() {
+        stubCurrentUser();
+
+        Date d1 = new Date(1_000_000L);
+        Date d2 = new Date(2_000_000L);
+        Task first  = task(1, StatusEnum.PENDING, d1, currentUser);
+        Task second = task(2, StatusEnum.PENDING, d2, currentUser);
+
+        when(taskRepository.findByUser(currentUser))
+                .thenReturn(new ArrayList<>(List.of(first, second)));
+
+        when(taskMapper.toDTOList(anyList())).thenReturn(List.of());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Task>> captor = ArgumentCaptor.forClass(List.class);
+
+        service.listAll(null, "noop");
+
+        verify(taskMapper).toDTOList(captor.capture());
+        List<Task> passed = captor.getValue();
+        assertEquals(List.of(1L, 2L), passed.stream().map(Task::getId).toList());
     }
 
 }

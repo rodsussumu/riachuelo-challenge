@@ -10,6 +10,7 @@ import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.OwnershipDeniedException;
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.TaskNotFoundException;
 import com.rodsussumu.riachuelo_backend.application.services.TaskService;
+import org.hamcrest.core.IsNull;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -93,7 +94,7 @@ class TaskControllerTest {
     @WithMockUser
     @DisplayName("GET /tasks should return 200 with list")
     void list_shouldReturn200() throws Exception {
-        Mockito.when(taskService.listAll()).thenReturn(List.of(
+        Mockito.when(taskService.listAll(isNull(), isNull())).thenReturn(List.of(
                 TaskDTO.builder().id(1L).description("A").status(StatusEnum.PENDING).build(),
                 TaskDTO.builder().id(2L).description("B").status(StatusEnum.IN_PROGRESS).build()
         ));

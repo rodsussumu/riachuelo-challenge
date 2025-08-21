@@ -4,17 +4,19 @@ import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthResponseDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserRegisterResponseDTO;
 import com.rodsussumu.riachuelo_backend.application.services.UserService;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/auth")
-@Tag(name = "Auth")
 public class UserController {
+
+    private static final String TOKEN_COOKIE = "ACCESS_TOKEN";
+    private static final Duration TOKEN_TTL = Duration.ofSeconds(6000);
 
     private final UserService userService;
 
@@ -30,8 +32,9 @@ public class UserController {
 
     @PostMapping("login")
     public ResponseEntity<UserAuthResponseDTO> login(@RequestBody UserAuthDTO userAuthDTO) {
-        UserAuthResponseDTO response =  userService.login(userAuthDTO);
-        return ResponseEntity.ok(response);
-    }
+        UserAuthResponseDTO response = userService.login(userAuthDTO);
 
+        return ResponseEntity.ok()
+                .body(response);
+    }
 }

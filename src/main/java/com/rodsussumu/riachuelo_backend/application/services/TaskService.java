@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface TaskService {
     TaskDTO create(TaskRequestDTO dto);
-    List<TaskDTO> listAll();
+    List<TaskDTO> listAll(StatusEnum status, String sort);
     TaskDTO listById(Long id);
     TaskDTO updateTask(Long id, TaskRequestDTO dto);
     TaskDTO updateStatus(Long id, String status) throws BadRequestException;

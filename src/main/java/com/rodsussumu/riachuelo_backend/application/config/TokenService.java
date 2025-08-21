@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.GenerateTokenException;
 import com.rodsussumu.riachuelo_backend.application.models.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ public class TokenService {
 
 
         } catch(JWTCreationException exception){
-            throw new RuntimeException("Error Generating Token");
+            throw new GenerateTokenException();
         }
     }
 

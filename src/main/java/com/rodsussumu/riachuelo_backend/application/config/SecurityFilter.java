@@ -3,6 +3,7 @@ package com.rodsussumu.riachuelo_backend.application.config;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,8 +20,8 @@ import java.io.IOException;
 public class SecurityFilter extends OncePerRequestFilter {
     private static final String BEARER = "Bearer ";
 
-    private TokenService tokenService;
-    private UserDetailsService userDetailsService;
+    private final TokenService tokenService;
+    private final UserDetailsService userDetailsService;
 
     public SecurityFilter(TokenService tokenService, UserDetailsService userDetailsService) {
         this.tokenService = tokenService;
@@ -57,8 +58,15 @@ public class SecurityFilter extends OncePerRequestFilter {
     }
 
     private String recoverToken(HttpServletRequest request){
+        if (request.getCookies() != null) {
+            for (Cookie c : request.getCookies()) {
+                if ("ACCESS_TOKEN".equals(c.getName())) {
+                    return c.getValue();
+                }
+            }
+        }
         var authHeader = request.getHeader("Authorization");
-        if(StringUtils.isBlank(authHeader)) return null;
-        return authHeader.replace(BEARER, "");
+        if (StringUtils.isBlank(authHeader)) return null;
+        return authHeader.startsWith(BEARER) ? authHeader.substring(BEARER.length()) : authHeader;
     }
 }

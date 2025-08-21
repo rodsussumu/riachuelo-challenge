@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -87,7 +88,7 @@ class SecurityConfigTest {
     @WithMockUser
     @DisplayName("GET /tasks returns 200 with authenticated user")
     void tasks_allowsAuthenticated() throws Exception {
-        when(taskService.listAll()).thenReturn(List.of());
+        when(taskService.listAll(isNull(), isNull())).thenReturn(List.of());
         mvc.perform(get("/tasks"))
                 .andExpect(status().isOk());
     }

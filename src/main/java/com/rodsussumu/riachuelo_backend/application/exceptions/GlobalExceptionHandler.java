@@ -62,4 +62,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleUsernameAlreadyExists(UsernameAlreadyExistsException ex) {
         return build(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), "USERNAME_ALREADY_EXISTS");
     }
+
+    @ExceptionHandler(GenerateTokenException.class)
+    public ResponseEntity<ErrorResponseDTO> handleTokenGeneration(GenerateTokenException ex) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex.getMessage(), "TOKEN_GENERATION_ERROR");
+    }
 }

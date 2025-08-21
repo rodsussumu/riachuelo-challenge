@@ -20,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -61,9 +63,22 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDTO(taskRepository.save(task));
     }
 
-    public List<TaskDTO> listAll() {
+    public List<TaskDTO> listAll(StatusEnum status, String sort) {
         User user = getAuthenticatedUser();
-        return taskMapper.toDTOList(taskRepository.findByUser(user));
+        List<Task> tasks = (status != null)
+                ? taskRepository.findByUserAndStatus(user, status)
+                : taskRepository.findByUser(user);
+
+        if (sort != null) {
+            Comparator<Date> cmp = Comparator.nullsLast(Comparator.naturalOrder());
+            if ("dueDateAsc".equalsIgnoreCase(sort)) {
+                tasks.sort(Comparator.comparing(Task::getDueDate, cmp));
+            } else if ("dueDateDesc".equalsIgnoreCase(sort)) {
+                tasks.sort(Comparator.comparing(Task::getDueDate, cmp).reversed());
+            }
+        }
+
+        return taskMapper.toDTOList(tasks);
     }
 
     public TaskDTO listById(Long id) {

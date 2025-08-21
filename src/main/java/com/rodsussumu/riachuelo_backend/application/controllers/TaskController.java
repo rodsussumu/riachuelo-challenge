@@ -2,6 +2,7 @@ package com.rodsussumu.riachuelo_backend.application.controllers;
 import com.rodsussumu.riachuelo_backend.application.dtos.StatusUpdateRequestDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskRequestDTO;
+import com.rodsussumu.riachuelo_backend.application.enums.StatusEnum;
 import com.rodsussumu.riachuelo_backend.application.services.TaskService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.coyote.BadRequestException;
@@ -31,8 +32,11 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskDTO>> list() {
-        return ResponseEntity.ok(taskService.listAll());
+    public ResponseEntity<List<TaskDTO>> list(
+            @RequestParam(required = false) StatusEnum status,
+            @RequestParam(required = false, name = "sort") String sort
+    ) {
+        return ResponseEntity.ok(taskService.listAll(status, sort));
     }
 
     @GetMapping("/{id}")

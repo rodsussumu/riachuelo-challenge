@@ -1,10 +1,12 @@
 package com.rodsussumu.riachuelo_backend.application.config;
 
-
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -13,9 +15,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import jakarta.servlet.FilterChain;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -53,7 +52,7 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNull(SecurityContextHolder.getContext().getAuthentication());
   }
 
@@ -66,20 +65,20 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNull(SecurityContextHolder.getContext().getAuthentication());
   }
 
   @Test
-  @DisplayName("should not authenticate when Authorization header is missing")
-  void no_header() throws Exception {
+  @DisplayName("should not authenticate when Authorization header is missing and no cookie")
+  void no_header_no_cookie() throws Exception {
     MockHttpServletRequest req = new MockHttpServletRequest();
     req.setServletPath("/tasks");
     MockHttpServletResponse res = new MockHttpServletResponse();
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNull(SecurityContextHolder.getContext().getAuthentication());
     verifyNoInteractions(tokenService, userDetailsService);
   }
@@ -94,7 +93,7 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNull(SecurityContextHolder.getContext().getAuthentication());
     verifyNoInteractions(tokenService, userDetailsService);
   }
@@ -113,7 +112,7 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNotNull(SecurityContextHolder.getContext().getAuthentication());
     assertEquals("john", ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername());
   }
@@ -132,7 +131,7 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNotNull(SecurityContextHolder.getContext().getAuthentication());
     assertEquals("john", ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername());
   }
@@ -149,7 +148,7 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNull(SecurityContextHolder.getContext().getAuthentication());
     verify(userDetailsService, never()).loadUserByUsername(anyString());
   }
@@ -167,7 +166,82 @@ class SecurityFilterTest {
 
     filter.doFilter(req, res, filterChain);
 
-    verify(filterChain, times(1)).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
     assertNull(SecurityContextHolder.getContext().getAuthentication());
+  }
+
+  @Test
+  @DisplayName("should authenticate using cookie ACCESS_TOKEN when present")
+  void cookie_valid_authenticates() throws Exception {
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.setServletPath("/tasks");
+    req.setCookies(new Cookie("ACCESS_TOKEN", "cookieJwt"));
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    when(tokenService.validateToken("cookieJwt")).thenReturn("bob");
+    UserDetails user = User.withUsername("bob").password("x").build();
+    when(userDetailsService.loadUserByUsername("bob")).thenReturn(user);
+
+    filter.doFilter(req, res, filterChain);
+
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+    assertEquals("bob", ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername());
+  }
+
+  @Test
+  @DisplayName("cookie ACCESS_TOKEN takes precedence over Authorization header")
+  void cookie_precedence_over_header() throws Exception {
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.setServletPath("/tasks");
+    req.setCookies(new Cookie("ACCESS_TOKEN", "cookieJwt"));
+    req.addHeader("Authorization", "Bearer headerJwt");
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    when(tokenService.validateToken("cookieJwt")).thenReturn("bob");
+    UserDetails user = User.withUsername("bob").password("x").build();
+    when(userDetailsService.loadUserByUsername("bob")).thenReturn(user);
+
+    filter.doFilter(req, res, filterChain);
+
+    verify(tokenService).validateToken("cookieJwt");
+    verify(tokenService, never()).validateToken("headerJwt");
+    assertEquals("bob", ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername());
+  }
+
+  @Test
+  @DisplayName("falls back to header when cookies have no ACCESS_TOKEN")
+  void cookie_other_name_fallback_to_header() throws Exception {
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.setServletPath("/tasks");
+    req.setCookies(new Cookie("OTHER", "x"));
+    req.addHeader("Authorization", "Bearer abc");
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    when(tokenService.validateToken("abc")).thenReturn("john");
+    UserDetails user = User.withUsername("john").password("x").build();
+    when(userDetailsService.loadUserByUsername("john")).thenReturn(user);
+
+    filter.doFilter(req, res, filterChain);
+
+    verify(tokenService).validateToken("abc");
+    assertEquals("john", ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername());
+  }
+
+  @Test
+  @DisplayName("should not authenticate when cookie ACCESS_TOKEN is invalid (null username)")
+  void cookie_invalid_returns_null_username() throws Exception {
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.setServletPath("/tasks");
+    req.setCookies(new Cookie("ACCESS_TOKEN", "badCookie"));
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    when(tokenService.validateToken("badCookie")).thenReturn(null);
+
+    filter.doFilter(req, res, filterChain);
+
+    verify(filterChain).doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+    assertNull(SecurityContextHolder.getContext().getAuthentication());
+    verify(userDetailsService, never()).loadUserByUsername(anyString());
   }
 }

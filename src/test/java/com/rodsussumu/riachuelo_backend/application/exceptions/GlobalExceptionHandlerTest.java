@@ -98,4 +98,18 @@ class GlobalExceptionHandlerTest {
         assertEquals("Username already registered.", resp.getBody().message());
         assertEquals("USERNAME_ALREADY_EXISTS", resp.getBody().code());
     }
+
+    @Test
+    @DisplayName("handleTokenGeneration returns 500 and proper body")
+    void handleTokenGeneration_returns500() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        ResponseEntity<ErrorResponseDTO> resp = handler.handleTokenGeneration(new GenerateTokenException());
+
+        assertEquals(500, resp.getStatusCode().value());
+        ErrorResponseDTO body = resp.getBody();
+        assertEquals(500, body.status());
+        assertEquals("Internal Server Error", body.error());
+        assertEquals("Error Generating Token", body.message());
+        assertEquals("TOKEN_GENERATION_ERROR", body.code());
+    }
 }
