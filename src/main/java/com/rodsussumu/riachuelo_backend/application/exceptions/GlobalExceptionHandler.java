@@ -1,22 +1,13 @@
 package com.rodsussumu.riachuelo_backend.application.exceptions;
 
-import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.rodsussumu.riachuelo_backend.application.dtos.ErrorResponseDTO;
-import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.InvalidStatusException;
-import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.InvalidTokenException;
-import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.OwnershipDeniedException;
-import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.TaskNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.nio.file.AccessDeniedException;
-import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -37,12 +28,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidStatusException.class)
-    public ResponseEntity<ErrorResponseDTO> handleInvalidStatus(InvalidStatusException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDTO> handleInvalidStatus(InvalidStatusException ex) {
         return build(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(),"TASK_INVALID_STATUS");
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponseDTO> handleBadCredentials(BadCredentialsException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleBadCredentialsSpring(BadCredentialsException ex) {
+        return build(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), "BAD_CREDENTIALS");
+    }
+
+    @ExceptionHandler(com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.BadCredentialsException.class)
+    public ResponseEntity<ErrorResponseDTO> handleBadCredentialsCustom(
+            com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.BadCredentialsException ex) {
         return build(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), "BAD_CREDENTIALS");
     }
 
@@ -59,5 +56,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ErrorResponseDTO> handleInvalidToken(InvalidTokenException ex) {
         return build(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), "INVALID_TOKEN");
+    }
+
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDTO> handleUsernameAlreadyExists(UsernameAlreadyExistsException ex) {
+        return build(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), "USERNAME_ALREADY_EXISTS");
     }
 }

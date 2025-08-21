@@ -5,6 +5,7 @@ import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthResponseDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserRegisterResponseDTO;
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.BadCredentialsException;
+import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.UsernameAlreadyExistsException;
 import com.rodsussumu.riachuelo_backend.application.models.User;
 import com.rodsussumu.riachuelo_backend.application.repositories.UserRepository;
 import com.rodsussumu.riachuelo_backend.application.services.UserService;
@@ -39,17 +40,16 @@ public class UserServiceImpl implements UserService {
 
     public UserRegisterResponseDTO register(UserAuthDTO userAuthDTO) {
         if (userRepository.findByUsername(userAuthDTO.username()).isPresent()) {
-            throw new RuntimeException("User already registered.");
+            throw new UsernameAlreadyExistsException();
         }
         User user = new User();
         user.setUsername(userAuthDTO.username());
         user.setPassword(passwordEncoder.encode(userAuthDTO.password()));
         userRepository.save(user);
-        UserRegisterResponseDTO userRegisterResponseDTO = UserRegisterResponseDTO.builder()
+        return UserRegisterResponseDTO.builder()
                 .username(userAuthDTO.username())
                 .message("User created")
                 .build();
-        return userRegisterResponseDTO;
     }
 
     public UserAuthResponseDTO login(UserAuthDTO userAuthDTO) {

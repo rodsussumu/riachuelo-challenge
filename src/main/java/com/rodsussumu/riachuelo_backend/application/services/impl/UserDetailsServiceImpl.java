@@ -17,7 +17,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         this.repository = repository;
     }
 
-    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         var user = repository.findByUsername(username)
                 .orElseThrow(InvalidTokenException::new);
