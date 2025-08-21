@@ -1,5 +1,6 @@
 package com.rodsussumu.riachuelo_backend.application.services.impl;
 
+import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.InvalidTokenException;
 import com.rodsussumu.riachuelo_backend.application.repositories.UserRepository;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,10 +20,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         var user = repository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
+                .orElseThrow(InvalidTokenException::new);
         return User.withUsername(user.getUsername())
                 .password(user.getPassword())
-                .authorities("USER")
                 .build();
     }
 }

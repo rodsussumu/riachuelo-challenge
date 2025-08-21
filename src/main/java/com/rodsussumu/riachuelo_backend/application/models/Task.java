@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.Date;
-import java.util.Set;
 
 @Entity
 @Table(name = "tb_tasks")
@@ -22,12 +21,22 @@ public class Task {
 
     private String description;
 
-    private Date create_date;
+    @Column(name = "created_at")
+    private Date createdAt;
 
-    private Date expire_date;
+    @Column(name = "due_date")
+    private Date dueDate;
 
-    private StatusEnum status;
+    @Enumerated(EnumType.STRING)
+    private StatusEnum status = StatusEnum.PENDING;
 
-    @ManyToMany(mappedBy = "tasks")
-    private Set<User> users;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) createdAt = new java.util.Date();
+        if (status == null) status = StatusEnum.PENDING;
+    }
 }

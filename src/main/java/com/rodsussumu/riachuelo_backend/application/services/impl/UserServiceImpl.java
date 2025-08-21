@@ -4,12 +4,12 @@ import com.rodsussumu.riachuelo_backend.application.config.TokenService;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthResponseDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserRegisterResponseDTO;
+import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.BadCredentialsException;
 import com.rodsussumu.riachuelo_backend.application.models.User;
 import com.rodsussumu.riachuelo_backend.application.repositories.UserRepository;
 import com.rodsussumu.riachuelo_backend.application.services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +25,7 @@ public class UserServiceImpl implements UserService {
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
 
-    UserServiceImpl(
+    public UserServiceImpl(
             UserRepository userRepository,
             AuthenticationManager authenticationManager,
             TokenService tokenService,
@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
             Optional<User> user = userRepository.findByUsername(userAuthDTO.username());
 
             if(Objects.isNull(user)) {
-                throw new BadCredentialsException("Username or password is invalid!");
+                throw new BadCredentialsException();
             }
 
             String username = authentication.getName();
@@ -77,7 +77,7 @@ public class UserServiceImpl implements UserService {
 
             return ResponseEntity.ok(userAuthResponseDTO);
         } catch (BadCredentialsException ex) {
-            throw new BadCredentialsException("Username or password is invalid!");
+            throw new BadCredentialsException();
         }
     }
 
