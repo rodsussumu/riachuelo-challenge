@@ -1,5 +1,5 @@
 package com.rodsussumu.riachuelo_backend.application.controllers;
-import com.rodsussumu.riachuelo_backend.application.dtos.StatusUpdateRequest;
+import com.rodsussumu.riachuelo_backend.application.dtos.StatusUpdateRequestDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskRequestDTO;
 import com.rodsussumu.riachuelo_backend.application.services.TaskService;
@@ -33,15 +33,26 @@ public class TaskController {
         return ResponseEntity.ok(taskService.listAll());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<TaskDTO> listById(
+        @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(taskService.listById(id));
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<TaskDTO> update(@PathVariable Long id,
-                                          @RequestBody TaskRequestDTO dto) {
+    public ResponseEntity<TaskDTO> update(
+        @PathVariable Long id,
+        @RequestBody TaskRequestDTO dto
+    ) {
         return ResponseEntity.ok(taskService.updateTask(id, dto));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<TaskDTO> updateStatus(@PathVariable Long id,
-                                                @RequestBody StatusUpdateRequest statusUpdateRequest) throws BadRequestException {
+    public ResponseEntity<TaskDTO> updateStatus(
+        @PathVariable Long id,
+        @RequestBody StatusUpdateRequestDTO statusUpdateRequest
+    ) throws BadRequestException {
         return ResponseEntity.ok(taskService.updateStatus(id, statusUpdateRequest.status()));
     }
 

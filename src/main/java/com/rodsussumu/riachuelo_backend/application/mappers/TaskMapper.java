@@ -16,8 +16,8 @@ public interface TaskMapper {
     @Mappings({
             @Mapping(target = "id", ignore = true),
             @Mapping(target = "user", ignore = true),
-            @Mapping(target = "createdAt", ignore = true),  // será definido no @PrePersist
-            @Mapping(target = "status", ignore = true),     // idem
+            @Mapping(target = "createdAt", ignore = true),
+            @Mapping(target = "status", ignore = true),
             @Mapping(source = "dueDate", target = "dueDate")
     })
     Task toEntity(TaskRequestDTO dto);

@@ -6,6 +6,6 @@ import com.rodsussumu.riachuelo_backend.application.dtos.UserRegisterResponseDTO
 import org.springframework.http.ResponseEntity;
 
 public interface UserService {
-    ResponseEntity<UserRegisterResponseDTO> register(UserAuthDTO userAuthDTO);
-    ResponseEntity<UserAuthResponseDTO> login(UserAuthDTO userAuthDTO);
+    UserRegisterResponseDTO register(UserAuthDTO userAuthDTO);
+    UserAuthResponseDTO login(UserAuthDTO userAuthDTO);
 }

@@ -37,7 +37,7 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public ResponseEntity<UserRegisterResponseDTO> register(UserAuthDTO userAuthDTO) {
+    public UserRegisterResponseDTO register(UserAuthDTO userAuthDTO) {
         if (userRepository.findByUsername(userAuthDTO.username()).isPresent()) {
             throw new RuntimeException("User already registered.");
         }
@@ -49,10 +49,10 @@ public class UserServiceImpl implements UserService {
                 .username(userAuthDTO.username())
                 .message("User created")
                 .build();
-        return ResponseEntity.ok(userRegisterResponseDTO);
+        return userRegisterResponseDTO;
     }
 
-    public ResponseEntity<UserAuthResponseDTO> login(UserAuthDTO userAuthDTO) {
+    public UserAuthResponseDTO login(UserAuthDTO userAuthDTO) {
         try {
             UsernamePasswordAuthenticationToken usernamePassword = new UsernamePasswordAuthenticationToken(
                     userAuthDTO.username(), userAuthDTO.password()
@@ -75,7 +75,7 @@ public class UserServiceImpl implements UserService {
                     .username(userAuthDTO.username())
                     .build();
 
-            return ResponseEntity.ok(userAuthResponseDTO);
+            return userAuthResponseDTO;
         } catch (BadCredentialsException ex) {
             throw new BadCredentialsException();
         }

@@ -66,16 +66,22 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDTOList(taskRepository.findByUser(user));
     }
 
+    public TaskDTO listById(Long id) {
+        Task task = getOwnedTaskOrThrow(id);
+        return taskMapper.toDTO(task);
+    }
+
     public TaskDTO updateTask(Long id, TaskRequestDTO dto) {
         Task task = getOwnedTaskOrThrow(id);
         taskMapper.updateFromRequest(dto, task);
         return taskMapper.toDTO(taskRepository.save(task));
     }
 
-    public TaskDTO updateStatus(Long id, StatusEnum status) throws BadRequestException {
+    public TaskDTO updateStatus(Long id, String status) throws BadRequestException {
         Task task = getOwnedTaskOrThrow(id);
         try {
-            task.setStatus(status);
+            StatusEnum statusName = StatusEnum.valueOf(status.toUpperCase());
+            task.setStatus(statusName);
             return taskMapper.toDTO(taskRepository.save(task));
         } catch (IllegalArgumentException ex) {
             throw new InvalidStatusException();

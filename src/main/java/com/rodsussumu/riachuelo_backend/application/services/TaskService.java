@@ -10,7 +10,8 @@ import java.util.List;
 public interface TaskService {
     TaskDTO create(TaskRequestDTO dto);
     List<TaskDTO> listAll();
+    TaskDTO listById(Long id);
     TaskDTO updateTask(Long id, TaskRequestDTO dto);
-    TaskDTO updateStatus(Long id, StatusEnum status) throws BadRequestException;
+    TaskDTO updateStatus(Long id, String status) throws BadRequestException;
     void deleteTask(Long id);
 }
