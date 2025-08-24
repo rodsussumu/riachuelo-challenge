@@ -1,5 +1,6 @@
 package com.rodsussumu.riachuelo_backend.application.services.impl;
 
+import com.rodsussumu.riachuelo_backend.application.config.TokenHolder;
 import com.rodsussumu.riachuelo_backend.application.config.TokenService;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.UserAuthResponseDTO;
@@ -70,12 +71,12 @@ public class UserServiceImpl implements UserService {
 
             String token = tokenService.generateToken(username);
 
-            UserAuthResponseDTO userAuthResponseDTO = UserAuthResponseDTO.builder()
-                    .token(token)
+            TokenHolder.setToken(token);
+
+            return UserAuthResponseDTO.builder()
+                    .authenticated(true)
                     .username(userAuthDTO.username())
                     .build();
-
-            return userAuthResponseDTO;
         } catch (BadCredentialsException ex) {
             throw new BadCredentialsException();
         }

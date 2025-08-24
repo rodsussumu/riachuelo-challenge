@@ -1,7 +1,6 @@
 package com.rodsussumu.riachuelo_backend.application.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rodsussumu.riachuelo_backend.application.config.TokenService;
 import com.rodsussumu.riachuelo_backend.application.dtos.StatusUpdateRequestDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskDTO;
 import com.rodsussumu.riachuelo_backend.application.dtos.TaskRequestDTO;
@@ -10,47 +9,29 @@ import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.OwnershipDeniedException;
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.TaskNotFoundException;
 import com.rodsussumu.riachuelo_backend.application.services.TaskService;
-import org.hamcrest.core.IsNull;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Date;
 import java.util.List;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TaskController.class)
-@Import(TaskControllerTest.TestSecurityConfig.class)
+@SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
+@Import(com.rodsussumu.riachuelo_backend.application.exceptions.GlobalExceptionHandler.class)
 class TaskControllerTest {
-
-    @TestConfiguration
-    static class TestSecurityConfig {
-        @Bean
-        SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-            return http
-                    .csrf(AbstractHttpConfigurer::disable)
-                    .authorizeHttpRequests(reg -> reg.anyRequest().permitAll())
-                    .build();
-        }
-    }
 
     @Autowired
     private MockMvc mvc;
@@ -60,9 +41,6 @@ class TaskControllerTest {
 
     @MockitoBean
     private TaskService taskService;
-
-    @MockitoBean
-    private TokenService tokenService;
 
     @Test
     @WithMockUser
@@ -85,7 +63,7 @@ class TaskControllerTest {
                         .contentType(APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", containsString("/tasks/1")))
+                .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/tasks/1")))
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.description").value("New"));
     }
@@ -174,14 +152,12 @@ class TaskControllerTest {
                 .andExpect(jsonPath("$.code").value("TASK_NOT_FOUND"));
     }
 
-    // 403 - Ownership negado em GET /tasks/{id}
     @Test
     @WithMockUser
     @DisplayName("GET /tasks/{id} should return 403 when ownership denied")
     void listById_shouldReturn403_whenOwnershipDenied() throws Exception {
         OwnershipDeniedException ex = new OwnershipDeniedException();
-        Mockito.when(taskService.listById(66L))
-                .thenThrow(ex);
+        Mockito.when(taskService.listById(66L)).thenThrow(ex);
 
         mvc.perform(get("/tasks/66"))
                 .andExpect(status().isForbidden())
@@ -191,7 +167,6 @@ class TaskControllerTest {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
-    // 400 - Status inválido em PATCH /tasks/{id}/status
     @Test
     @WithMockUser
     @DisplayName("PATCH /tasks/{id}/status should return 400 when status is invalid")
@@ -211,13 +186,11 @@ class TaskControllerTest {
                 .andExpect(jsonPath("$.code").value("TASK_INVALID_STATUS"));
     }
 
-    // 404 - Task não encontrada em DELETE /tasks/{id}
     @Test
     @WithMockUser
     @DisplayName("DELETE /tasks/{id} should return 404 when task not found")
     void delete_shouldReturn404_whenNotFound() throws Exception {
-        Mockito.doThrow(new TaskNotFoundException(99L))
-                .when(taskService).deleteTask(99L);
+        Mockito.doThrow(new TaskNotFoundException(99L)).when(taskService).deleteTask(99L);
 
         mvc.perform(delete("/tasks/99"))
                 .andExpect(status().isNotFound())

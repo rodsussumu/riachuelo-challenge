@@ -52,7 +52,6 @@ class TaskServiceImplTest {
         currentUser.setId(1L);
         currentUser.setUsername("alice");
         SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("alice", "pwd"));
-        // sem stubbing aqui!
     }
 
     @AfterEach

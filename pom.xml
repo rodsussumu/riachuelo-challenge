@@ -127,6 +127,14 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
+				<configuration>
+					<excludes>
+						<exclude>**/Application.class</exclude>
+						<exclude>**/main/**/*</exclude>
+						<exclude>com/rodsussumu/riachuelo_backend/application/models/**/*</exclude>
+						<exclude>com/rodsussumu/riachuelo_backend/application/dtos/**/</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>

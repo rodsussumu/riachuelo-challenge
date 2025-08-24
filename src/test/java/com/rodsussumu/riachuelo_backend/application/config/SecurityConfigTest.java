@@ -49,7 +49,7 @@ class SecurityConfigTest {
         when(userService.login(any(UserAuthDTO.class)))
                 .thenReturn(UserAuthResponseDTO.builder()
                         .username("john")
-                        .token("tkn")
+                        .authenticated(true)
                         .build());
 
         mvc.perform(post("/auth/login")
@@ -57,7 +57,7 @@ class SecurityConfigTest {
                         .content(mapper.writeValueAsString(new UserAuthDTO("john", "123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("john"))
-                .andExpect(jsonPath("$.token").value("tkn"));
+                .andExpect(jsonPath("$.authenticated").value(true));
     }
 
     @Test

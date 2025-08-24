@@ -9,22 +9,29 @@ import com.rodsussumu.riachuelo_backend.application.exceptions.GlobalExceptionHa
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.BadCredentialsException;
 import com.rodsussumu.riachuelo_backend.application.exceptions.custom_exceptions.UsernameAlreadyExistsException;
 import com.rodsussumu.riachuelo_backend.application.services.UserService;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
+
+import java.util.List;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@SpringBootTest
+@AutoConfigureMockMvc(addFilters = true)
 @Import(GlobalExceptionHandler.class)
 class UserControllerTest {
 
@@ -60,11 +67,11 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /auth/login should return 200 with token")
+    @DisplayName("POST /auth/login should return 200 with authenticated=true")
     void login_shouldReturn200() throws Exception {
         UserAuthResponseDTO out = UserAuthResponseDTO.builder()
                 .username("john")
-                .token("tkn")
+                .authenticated(true)
                 .build();
 
         Mockito.when(userService.login(new UserAuthDTO("john", "123")))
@@ -75,7 +82,7 @@ class UserControllerTest {
                         .content(mapper.writeValueAsString(new UserAuthDTO("john", "123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("john"))
-                .andExpect(jsonPath("$.token").value("tkn"));
+                .andExpect(jsonPath("$.authenticated").value(true));
     }
 
     @Test

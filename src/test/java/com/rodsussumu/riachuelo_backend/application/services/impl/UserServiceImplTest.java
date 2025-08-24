@@ -80,7 +80,7 @@ public class UserServiceImplTest {
         UserAuthResponseDTO resp = service.login(new UserAuthDTO("john", "123"));
 
         assertEquals("john", resp.username());
-        assertEquals("tkn", resp.token());
+        assertEquals(true, resp.authenticated());
         verify(authenticationManager).authenticate(any());
         verify(tokenService).generateToken("john");
     }

@@ -5,5 +5,5 @@ import lombok.Builder;
 @Builder
 public record UserAuthResponseDTO(
     String username,
-    String token
+    boolean authenticated
 ) { }
