@@ -10,6 +10,9 @@ docker compose up
 # Documentação
 * Disponibilizada localmente no endpoint http://localhost:8080/swagger-ui/index.html
 * Projeto foi deployado utilizando o PaaS chamado Render, podendo ser acessado pelo seguinte url https://riachuelo-challenge.onrender.com/swagger-ui/index.html
+* Code coverave
+  <img width="1470" height="307" alt="image" src="https://github.com/user-attachments/assets/39a0d72f-adc7-4fc9-9dd9-cce254f65ff3" />
+
 
 # Comentários
 * Utilizado lombok para criação de DTOs em conjunto com records para melhor visualização de criação de DTOs utilizando o design pattern e anotação Builder
