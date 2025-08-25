@@ -7,6 +7,7 @@ import java.util.Date;
 @Builder
 public record TaskDTO(
         Long id,
+        String title,
         String description,
         Date createdAt,
         Date dueDate,
